@@ -1,5 +1,5 @@
 {
-  "name": "oc-context-grid",
+  "name": "@khaosoigai/oc-context-grid",
   "version": "0.1.0",
   "description": "Claude Code-style context usage pixel-grid for the OpenCode TUI",
   "type": "module",
@@ -8,6 +8,16 @@
   },
   "engines": {
     "opencode": "^1.18.0"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khaosoi/oc-context-grid-plugin.git"
   },
   "scripts": {
     "test": "bun test",
