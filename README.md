@@ -102,6 +102,9 @@ Pass options as the second tuple element in `tui.json`:
 | --- | --- | --- | --- |
 | `sidebar` | boolean | `true` | Show the mini-grid in the session sidebar |
 
+Omitting `sidebar` (or passing `{}`) leaves it on — the mini-grid shows unless you
+explicitly pass `"sidebar": false`.
+
 Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
 
 ## Development
