@@ -53,10 +53,9 @@ const tui: TuiPlugin = async (api, options) => {
         desc: "Show context usage as a grid of squares",
         run() {
           const current = api.route.current;
-          origin =
-            current.name === "session"
-              ? { sessionID: current.params.sessionID }
-              : {};
+          const sessionID =
+            current.name === "session" ? current.params?.sessionID : undefined;
+          origin = typeof sessionID === "string" ? { sessionID } : {};
           api.route.navigate("contextgrid", origin);
         }
       }

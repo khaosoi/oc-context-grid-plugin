@@ -10,13 +10,16 @@
     "opencode": "^1.18.0"
   },
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "license": "MIT",
   "devDependencies": {
     "@opencode-ai/plugin": "^1.18.25",
     "@opentui/solid": "0.4.5",
-    "solid-js": "1.9.10"
+    "bun-types": "^1.4.0",
+    "solid-js": "1.9.10",
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
     "@opentui/solid": "0.4.5",
