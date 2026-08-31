@@ -36,6 +36,7 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.opencode/
 *.swp
 *.swo
 .DS_Store
