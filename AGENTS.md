@@ -10,8 +10,11 @@ pixel grid (a sidebar mini-grid and a full-screen `/contextgrid` view). See
 
 - `bun install` — install dependencies
 - `bun test` — run the test suites in `test/`
+- `bun run typecheck` — typecheck with `tsc --noEmit`
 
-Run `bun test` after any change and make sure it passes before finishing.
+Run `bun test` and `bun run typecheck` after any change and make sure they pass
+before finishing. CI (`.github/workflows/ci.yml`) runs both on PRs and pushes to
+`main`.
 
 ## Layout
 
@@ -22,6 +25,17 @@ Run `bun test` after any change and make sure it passes before finishing.
 - `src/format.ts` — token/cost/percent formatting
 - `src/components/` — TUI views (`MiniGrid`, `FullView`, shared `Grid`, colours)
 - `test/` — unit tests (grid, breakdown, data)
+- `.github/workflows/` — CI (`ci.yml`), release-please + npm publish (`release.yml`)
+- `release-please-config.json` / `.release-please-manifest.json` — release-please config
+
+## Releases
+
+- Commit messages must follow conventional commits (`feat:`, `fix:`, `docs:`, …) —
+  release-please derives versions and `CHANGELOG.md` from them.
+- On merge to `main`, release-please opens a release PR (`chore: release vX.Y.Z`).
+  Merging it tags the release, cuts a GitHub Release and publishes
+  `@khaosoigai/oc-context-grid` to npm via trusted publishing (OIDC, no registry
+  token). Needs the `RELEASE_APP_ID` / `RELEASE_APP_PRIVATE_KEY` repo secrets.
 
 ## Conventions
 
