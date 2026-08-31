@@ -76,18 +76,17 @@ GLM-5.3-Flash · 20.5k/1M tokens (2%) · $0.00 spent
 
 Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
 
-```sh
-bun add -d @khaosoigai/oc-context-grid
-```
-
-Add to your project's `.opencode/tui.json`:
+Add to your project's `.opencode/tui.json` (or global `~/.config/opencode/tui.json`):
 
 ```json
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": [["@khaosoigai/oc-context-grid/tui", {}]]
+  "plugin": [["@khaosoigai/oc-context-grid", {}]]
 }
 ```
+
+OpenCode installs the package automatically at startup (cached under
+`~/.cache/opencode/`) — no `bun add` needed.
 
 Restart OpenCode.
 
@@ -96,7 +95,7 @@ Restart OpenCode.
 Pass options as the second tuple element in `tui.json`:
 
 ```json
-"plugin": [["@khaosoigai/oc-context-grid/tui", { "sidebar": false }]]
+"plugin": [["@khaosoigai/oc-context-grid", { "sidebar": false }]]
 ```
 
 | Option | Type | Default | Description |
