@@ -2,6 +2,14 @@
   "name": "@khaosoigai/oc-context-grid",
   "version": "0.2.0",
   "description": "Claude Code-style context usage pixel-grid for the OpenCode TUI",
+  "keywords": [
+    "opencode",
+    "opentui",
+    "tui",
+    "context-window",
+    "solid-js",
+    "plugin"
+  ],
   "type": "module",
   "exports": {
     "./tui": "./src/index.tsx"
