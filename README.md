@@ -16,13 +16,55 @@ GLM-5.3-Flash · 20.5k/1M tokens (2%) · $0.00 spent
                                ⛶ Free space: 980k (98.0%)
 ```
 
+## Status: dormant pending upstream Bun fix
+
+**Deprecated on npm; repo is private.** The plugin installs and renders, but on OpenCode
+builds that embed Bun ≤ 1.3.x nothing ever updates live — every view is a snapshot taken
+at mount time. It becomes viable again once OpenCode ships a binary built on Bun ≥ 1.4.
+
+### Root cause
+
+- OpenCode bridges plugin imports of `solid-js` / `@opentui/solid` to its own bundled
+  instances via `ensureRuntimePluginSupport` (a runtime `Bun.plugin`), so plugin memos
+  subscribe to the host's reactive store.
+- Bun ≤ 1.3.x has [oven-sh/bun#40397](https://github.com/oven-sh/bun/issues/40397): a
+  runtime plugin's `onResolve` never fires for bare specifiers (the `could_be_plugin`
+  pre-filter skips anything without a file extension). Fixed by
+  [oven-sh/bun#40398](https://github.com/oven-sh/bun/pull/40398); verified working in
+  Bun 1.4.0.
+- Unbridged, the plugin's `import "solid-js"` resolves to its own copy under
+  `~/.cache/opencode/packages/.../node_modules/solid-js`, which under Bun's default export
+  conditions is `dist/server.js` — the SSR build, whose memos/signals create no
+  subscriptions at all.
+
+### Symptoms (OpenCode 1.18.25, embeds Bun 1.3.14)
+
+- Sidebar mini-grid shows `no usage yet` until you open and close `/contextgrid`
+  (the remount re-computes once), then freezes again.
+- The full `/contextgrid` view looks correct but is likewise a snapshot.
+- OpenCode's built-in "Context" sidebar block updates live (it is bundled with the host).
+
+### How to check whether a given OpenCode build will work
+
+```sh
+strings "$(readlink -f "$(command -v opencode)")" | grep -m1 "Bun v"
+```
+
+- Reports **Bun ≥ 1.4** → bridge works, plugin should be fully reactive.
+- Reports **Bun ≤ 1.3.x** → bridge is inert, plugin renders but never updates.
+
+If the version is ambiguous, the decisive in-app test: open a session with existing
+usage, watch the sidebar mini-grid while an assistant reply streams in. Live update =
+working; frozen = still affected.
+
 ## What you get
 
 - **Sidebar mini-grid** — a 10×3 grid plus a `20.5k/1M tokens (2%)` line, always visible
   in the session sidebar next to OpenCode's built-in Context panel.
 - **Full view** — `/contextgrid` (alias `/ctx`) opens a 10×10 grid with a per-category
   legend (tokens and %), model, totals and cost. `esc` returns to your session.
-- Both views update live as the session streams (reactive Solid state — no polling).
+- Both views update live as the session streams (reactive Solid state — no polling) —
+  **only** on unaffected OpenCode builds; see the status section above.
 
 ## How it works (no tokenizers)
 
@@ -74,7 +116,8 @@ GLM-5.3-Flash · 20.5k/1M tokens (2%) · $0.00 spent
 
 ## Install
 
-Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
+Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes) built on
+**Bun >= 1.4** — check with the `strings` command in the status section above first.
 
 Add to your project's `.opencode/tui.json` (or global `~/.config/opencode/tui.json`):
 
