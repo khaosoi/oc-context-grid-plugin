@@ -111,7 +111,8 @@ Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
 
 ```sh
 bun install
-bun test   # unit tests for the grid, breakdown and system-residual maths
+bun test          # unit tests for the grid, breakdown and system-residual maths
+bun run typecheck # tsc --noEmit over src/ and test/
 ```
 
 Layout:
