@@ -51,6 +51,5 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun test
       - run: bun run typecheck
-      # Provenance is skipped while the repo is private (requires public repo);
-      # add --provenance when it goes public.
-      - run: npm publish --access public
+      # --provenance requires a public repo and the OIDC id-token above
+      - run: npm publish --access public --provenance
