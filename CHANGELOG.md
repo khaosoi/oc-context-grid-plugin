@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.2.1...v0.2.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* widen peer dependency ranges to resolve npm install conflict ([#10](https://github.com/khaosoi/oc-context-grid-plugin/issues/10)) ([91a8440](https://github.com/khaosoi/oc-context-grid-plugin/commit/91a8440dba093369cc3cd383971d68199cd5f56f))
+
 ## [0.2.1](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.2.0...v0.2.1) (2026-08-31)
 
 
