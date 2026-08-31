@@ -1,0 +1,25 @@
+{
+  "name": "oc-context-grid",
+  "version": "0.1.0",
+  "description": "Claude Code-style context usage pixel-grid for the OpenCode TUI",
+  "type": "module",
+  "exports": {
+    "./tui": "./src/index.tsx"
+  },
+  "engines": {
+    "opencode": "^1.18.0"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.18.25",
+    "@opentui/solid": "0.4.5",
+    "solid-js": "1.9.10"
+  },
+  "peerDependencies": {
+    "@opentui/solid": "0.4.5",
+    "solid-js": "1.9.10"
+  }
+}
