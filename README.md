@@ -72,19 +72,20 @@ GLM-5.3-Flash · 20.5k/1M tokens (2%) · $0.00 spent
 - Percentages are computed against the model of the *last* assistant message — switching
   models mid-session re-bases the grid to that model's window.
 
-## Install (local development)
+## Install
+
+Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
 
 ```sh
-git clone <this-repo> ~/dev/oc-context-plugin
-cd ~/dev/oc-context-plugin && bun install
+bun add -d @khaosoigai/oc-context-grid
 ```
 
-Add to your project's `.opencode/tui.json` (or global `~/.config/opencode/tui.json`):
+Add to your project's `.opencode/tui.json`:
 
 ```json
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": [["/absolute/path/to/oc-context-plugin/src/index.tsx", {}]]
+  "plugin": [["@khaosoigai/oc-context-grid/tui", {}]]
 }
 ```
 
@@ -95,7 +96,7 @@ Restart OpenCode.
 Pass options as the second tuple element in `tui.json`:
 
 ```json
-"plugin": [["/path/to/oc-context-plugin/src/index.tsx", { "sidebar": false }]]
+"plugin": [["@khaosoigai/oc-context-grid/tui", { "sidebar": false }]]
 ```
 
 | Option | Type | Default | Description |
@@ -105,7 +106,24 @@ Pass options as the second tuple element in `tui.json`:
 Omitting `sidebar` (or passing `{}`) leaves it on — the mini-grid shows unless you
 explicitly pass `"sidebar": false`.
 
-Requires OpenCode >= 1.18 (TUI plugin slots, keymap layers and routes).
+### Local development
+
+```sh
+git clone https://github.com/khaosoi/oc-context-grid-plugin ~/dev/oc-context-grid-plugin
+cd ~/dev/oc-context-grid-plugin && bun install
+```
+
+Point the plugin entry at the source instead — project `.opencode/tui.json`
+or global `~/.config/opencode/tui.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": [["/absolute/path/to/oc-context-grid-plugin/src/index.tsx", {}]]
+}
+```
+
+Restart OpenCode.
 
 ## Development
 
