@@ -16,33 +16,44 @@ GLM-5.3-Flash · 20.5k/1M tokens (2%) · $0.00 spent
                                ⛶ Free space: 980k (98.0%)
 ```
 
-## Status: dormant pending upstream Bun fix
+## Status: dormant pending upstream Bun resolver fix
 
-**Deprecated on npm; repo is private.** The plugin installs and renders, but on OpenCode
-builds that embed Bun ≤ 1.3.x nothing ever updates live — every view is a snapshot taken
-at mount time. It becomes viable again once OpenCode ships a binary built on Bun ≥ 1.4.
+**Deprecated on npm; the repository remains public.**
+
+The published package installs and renders on OpenCode 1.18.x, but its views are
+snapshots created when they mount. Loading the source from a local path outside
+`node_modules` uses a different loader path and is not known to have this failure.
 
 ### Root cause
 
-- OpenCode bridges plugin imports of `solid-js` / `@opentui/solid` to its own bundled
-  instances via `ensureRuntimePluginSupport` (a runtime `Bun.plugin`), so plugin memos
-  subscribe to the host's reactive store.
-- Bun ≤ 1.3.x has [oven-sh/bun#40397](https://github.com/oven-sh/bun/issues/40397): a
-  runtime plugin's `onResolve` never fires for bare specifiers (the `could_be_plugin`
-  pre-filter skips anything without a file extension). Fixed by
-  [oven-sh/bun#40398](https://github.com/oven-sh/bun/pull/40398); verified working in
-  Bun 1.4.0.
-- Unbridged, the plugin's `import "solid-js"` resolves to its own copy under
-  `~/.cache/opencode/packages/.../node_modules/solid-js`, which under Bun's default export
-  conditions is `dist/server.js` — the SSR build, whose memos/signals create no
-  subscriptions at all.
+- OpenCode uses `ensureRuntimePluginSupport`, a runtime `Bun.plugin`, to bridge external
+  imports of `solid-js` and `@opentui/solid` to the host's bundled instances. The bridge
+  works when OpenTUI can inspect and rewrite the importing file. This is why some
+  precompiled, single-file TUI plugins remain reactive on the same OpenCode release.
+- This package instead publishes several raw TSX files. Its entrypoint imports the view
+  components through extensionless relative paths; those components import `createMemo`
+  from `solid-js`.
+- [oven-sh/bun#40397](https://github.com/oven-sh/bun/issues/40397) causes runtime
+  `onResolve` hooks to skip extensionless specifiers, including bare package imports.
+  OpenTUI can rewrite the runtime imports visible in the entrypoint, but it does not reach
+  the child components before Bun loads them.
+- The child imports therefore resolve to the package's own
+  `node_modules/solid-js/dist/server.js`. That SSR build evaluates `createMemo` once and
+  creates no reactive subscription, which explains the mount-time snapshots.
 
-### Symptoms (OpenCode 1.18.25, embeds Bun 1.3.14)
+[oven-sh/bun#40398](https://github.com/oven-sh/bun/pull/40398) proposes the required
+resolver change. Do not use Bun 1.4 as the compatibility boundary: Bun 1.4.0 still
+reproduces the bug, and the pull request was not part of that release. The plugin becomes
+viable from npm once OpenCode embeds a Bun build that contains the resolver fix, or its
+package is changed so all TUI runtime imports can be bridged from the entrypoint.
 
-- Sidebar mini-grid shows `no usage yet` until you open and close `/contextgrid`
-  (the remount re-computes once), then freezes again.
-- The full `/contextgrid` view looks correct but is likewise a snapshot.
-- OpenCode's built-in "Context" sidebar block updates live (it is bundled with the host).
+### Symptoms (npm package on OpenCode 1.18.25, embedded Bun 1.3.14)
+
+- The sidebar mini-grid shows `no usage yet` until you open and close `/contextgrid`.
+  Remounting computes the current value once, then the view freezes again.
+- The full `/contextgrid` view initially looks correct but is likewise a snapshot.
+- OpenCode's built-in "Context" sidebar block updates live because it is bundled with the
+  host.
 
 ### How to check whether a given OpenCode build will work
 
@@ -50,12 +61,13 @@ at mount time. It becomes viable again once OpenCode ships a binary built on Bun
 strings "$(readlink -f "$(command -v opencode)")" | grep -m1 "Bun v"
 ```
 
-- Reports **Bun ≥ 1.4** → bridge works, plugin should be fully reactive.
-- Reports **Bun ≤ 1.3.x** → bridge is inert, plugin renders but never updates.
+- **Bun 1.3.x or 1.4.0** → the published package is affected.
+- **A later Bun version** → the version alone is inconclusive; confirm that its release
+  contains the fix for `oven-sh/bun#40397`.
 
-If the version is ambiguous, the decisive in-app test: open a session with existing
-usage, watch the sidebar mini-grid while an assistant reply streams in. Live update =
-working; frozen = still affected.
+The decisive check is an in-app test. Open a session with existing usage and watch the
+sidebar mini-grid while an assistant reply streams. A changing grid is reactive; a frozen
+grid is still affected.
 
 ## What you get
 
