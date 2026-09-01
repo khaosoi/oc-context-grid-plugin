@@ -12,13 +12,13 @@
   ],
   "type": "module",
   "exports": {
-    "./tui": "./dist/tui.js"
+    "./tui": "./src/index.tsx"
   },
   "engines": {
     "opencode": "^1.18.0"
   },
   "files": [
-    "dist"
+    "src"
   ],
   "publishConfig": {
     "access": "public"
@@ -28,8 +28,6 @@
     "url": "git+https://github.com/khaosoi/oc-context-grid-plugin.git"
   },
   "scripts": {
-    "build": "tsup",
-    "prepack": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
@@ -38,9 +36,7 @@
     "@opencode-ai/plugin": "^1.18.25",
     "@opentui/solid": "0.4.5",
     "bun-types": "^1.4.0",
-    "esbuild-plugin-solid": "^0.6.0",
     "solid-js": "1.9.12",
-    "tsup": "^8.5.1",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {

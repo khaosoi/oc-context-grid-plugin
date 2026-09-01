@@ -2,20 +2,8 @@
 
 ## Status
 
-Trial in progress on this branch. Steps 1–5 are complete: the failing baseline is
-recorded (`bundled-tui-baseline.md`), the single-entry build, package contract and
-smoke/fixture tests are in place, and the loader fixture passes including headless
-reactive invalidation. Step 6 (the live TUI check on OpenCode 1.18.25) is pending.
-
-Two deviations from the plan as written:
-
-- Declaration output is disabled (`dts` removed from `tsup.config.ts`):
-  rollup-plugin-dts is incompatible with the repo's TypeScript 7, and OpenCode
-  loads the JS entry directly. Revisit if type publication is ever needed.
-- The fixture's host stand-in must serve the Solid **client** build
-  (`solid-js/dist/solid.js`). Plain Bun resolves `solid-js` to the SSR server
-  build, whose effects are inert — the same failure class the trial targets.
-  OpenCode's host supplies its own reactive instance, so this matches reality.
+Proposed trial only. This document does not change the plugin build, package, or runtime
+behaviour.
 
 ## Objective
 
