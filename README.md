@@ -44,8 +44,29 @@ snapshots created when they mount. Loading the source from a local path outside
 [oven-sh/bun#40398](https://github.com/oven-sh/bun/pull/40398) proposes the required
 resolver change. Do not use Bun 1.4 as the compatibility boundary: Bun 1.4.0 still
 reproduces the bug, and the pull request was not part of that release. The plugin becomes
-viable from npm once OpenCode embeds a Bun build that contains the resolver fix, or its
-package is changed so all TUI runtime imports can be bridged from the entrypoint.
+viable from npm once OpenCode embeds a Bun build that contains the resolver fix.
+
+### Bundled-packaging trial (negative)
+
+The alternative above — republishing as one precompiled entry so all runtime imports sit
+in the bridged entrypoint — was trialled and **disproved** on OpenCode 1.18.25
+(2026-06-14). A single ESM bundle (`tsup` + Solid `universal` mode, `solid-js` /
+`@opentui/solid` left external, verified artefact) crashed the TUI with
+`No renderer found` on first JSX creation: the crash stack shows `createElement`
+resolving from the plugin's own cached `node_modules/@opentui/solid`, not the host
+instance. The OpenTUI runtime bridge gates bare-import rewriting for importers under
+`node_modules` behind `nodeModulesBareSpecifiers` (default `false`), and OpenCode's
+`ensureRuntimePluginSupport` call passes no `rewrite` options; embedded Bun 1.3.x never
+fires runtime `onResolve` for bare specifiers either
+([oven-sh/bun#40397](https://github.com/oven-sh/bun/issues/40397)). For precompiled
+entries the Solid-transform `node_modules` exclusion that sank
+[anomalyco/opencode#33885](https://github.com/anomalyco/opencode/pull/33885) does not
+apply, so an upstream `rewrite: { nodeModulesBareSpecifiers: true }` would be sufficient
+for bundled plugins.
+
+Full evidence, the trial build and the loader fixture are preserved on branch
+`docs/bundled-tui-trial` (outcome: `docs/bundled-tui-trial.md` at commit `08d9197`;
+trial artefact: commit `83379cc`; baseline evidence: `docs/bundled-tui-baseline.md`).
 
 ### Symptoms (npm package on OpenCode 1.18.25, embedded Bun 1.3.14)
 
