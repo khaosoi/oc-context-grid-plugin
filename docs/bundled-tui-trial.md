@@ -2,8 +2,40 @@
 
 ## Status
 
-Proposed trial only. This document does not change the plugin build, package, or runtime
-behaviour.
+**Abandoned (negative result, 2026-06-14).** The trial was executed and failed at the
+live check (step 6). The package remains deprecated and the project dormant; the npm
+deprecation message is unchanged.
+
+Outcome: a single precompiled ESM bundle with `solid-js` / `@opentui/solid` kept
+external still crashes OpenCode 1.18.25 with `No renderer found` on first JSX creation
+(`/contextgrid`; sidebar slot errors are swallowed). The crash stack shows
+`createElement` resolving from the plugin's own cached `node_modules/@opentui/solid`,
+not the host instance — the runtime bridge does not rewrite bare imports for importers
+under `node_modules`.
+
+Root cause (verified in OpenCode `dev` source):
+
+- `packages/opencode/src/plugin/tui/runtime.ts` calls
+  `ensureRuntimePluginSupport({ additional: keymapRuntimeModules })` with no `rewrite`
+  options, so OpenTUI's runtime bridge keeps its default `nodeModulesBareSpecifiers:
+  false` for node_modules importers.
+- Embedded Bun 1.3.x never fires runtime `onResolve` for bare specifiers
+  (`oven-sh/bun#40397`), so no other mechanism catches these imports either.
+
+Why bundling could not win: exact-specifier `build.module()` registration survives the
+Bun bug (proven by the loader fixture in the trial commit), but OpenCode does not
+enumerate `solid-js` / `@opentui/solid` that way for npm plugins, and the OpenTUI
+bridge's importer-side gate excludes node_modules paths regardless.
+
+Revival path (upstream only): OpenCode passing
+`rewrite: { nodeModulesBareSpecifiers: true }` would be sufficient for precompiled
+plugin entries — the Solid-transform `node_modules` exclusion that sank PR #33885 does
+not apply to bundles (no JSX left to transform). Related: anomalyco/opencode#33884,
+#32996, #33885. If that lands, retest by restoring commit 83379cc on this branch.
+
+Baseline evidence is retained in `bundled-tui-baseline.md`; the trial commit (build
+configuration, packaging tests, loader fixture) was reverted and is preserved as
+83379cc in this branch's history.
 
 ## Objective
 
