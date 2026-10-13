@@ -1,21 +1,29 @@
-import type { AssistantMessage, Message, Part } from "@opencode-ai/sdk/v2";
-import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
+import type {
+  ModelInfo,
+  ProviderInfo,
+  SessionInfo,
+  SessionMessageInfo
+} from "@opencode/client";
 import {
   estimateBreakdown,
   estimateTokens,
-  userPartsChars,
+  userMessageChars,
   type BreakdownSegment,
+  type EstimatorMessage,
   type EstimatorPart
 } from "./breakdown";
 
 /**
  * Extraction layer: pulls the authoritative context numbers out of the
- * reactive TUI state and derives the category breakdown.
+ * reactive V2 plugin data layer and derives the category breakdown.
  *
  * Mirrors OpenCode's built-in sidebar-context plugin and context tab:
  *   total  = input + output + reasoning + cache.read + cache.write
- *   limit  = provider.models[modelID].limit.context
+ *   limit  = model.limit.context
  *   usage% = round(total / limit * 100)
+ *
+ * All inputs are plain reads from the reactive data store, so callers wrap
+ * them in a `createMemo` and Solid tracks the underlying store.
  */
 
 export type ContextData = {
@@ -28,70 +36,83 @@ export type ContextData = {
   segments: BreakdownSegment[];
 };
 
-const tokenTotal = (msg: AssistantMessage): number =>
-  msg.tokens.input +
-  msg.tokens.output +
-  msg.tokens.reasoning +
-  msg.tokens.cache.read +
-  msg.tokens.cache.write;
+export type ContextSnapshot = {
+  messages: readonly SessionMessageInfo[];
+  session: SessionInfo | undefined;
+  models: readonly ModelInfo[];
+  providers: readonly ProviderInfo[];
+};
 
-export function getContextData(
-  api: TuiPluginApi,
-  sessionID: string
-): ContextData | undefined {
-  const messages = api.state.session.messages(sessionID);
+export type { EstimatorMessage, EstimatorPart };
+
+const tokenTotal = (tokens: {
+  input: number;
+  output: number;
+  reasoning: number;
+  cache: { read: number; write: number };
+}): number =>
+  tokens.input +
+  tokens.output +
+  tokens.reasoning +
+  tokens.cache.read +
+  tokens.cache.write;
+
+/** Map a V2 SDK message to the estimator's structural shape. */
+const toEstimator = (msg: SessionMessageInfo): EstimatorMessage => {
+  if (msg.type === "user") {
+    return { id: msg.id, type: "user", text: msg.text };
+  }
+  if (msg.type !== "assistant") {
+    return { id: msg.id, type: msg.type };
+  }
+  return { id: msg.id, type: "assistant", content: msg.content, tokens: msg.tokens };
+};
+
+export function getContextData(snapshot: ContextSnapshot): ContextData | undefined {
+  const { messages, session, models, providers } = snapshot;
   const last = messages.findLast(
-    (item): item is AssistantMessage =>
-      item.role === "assistant" && item.tokens.output > 0
+    (item) =>
+      item.type === "assistant" && (item.tokens?.output ?? 0) > 0
   );
-  if (!last) return undefined;
+  if (!last || last.type !== "assistant") return undefined;
+  const tokens = last.tokens ? tokenTotal(last.tokens) : 0;
+  if (!tokens) return undefined;
 
-  const provider = api.state.provider.find(
-    (item) => item.id === last.providerID
+  const model = models.find(
+    (item) =>
+      item.providerID === last.model.providerID &&
+      (item.id === last.model.id || item.modelID === last.model.id)
   );
-  const model = provider?.models[last.modelID];
+  const provider = providers.find((item) => item.id === last.model.providerID);
   const limit = model?.limit.context ?? 0;
-  const tokens = tokenTotal(last);
 
-  const userMessages = messages.filter((item) => item.role === "user");
-  const systemPrompt = userMessages.findLast(
-    (item) => !!(item as { system?: string }).system
-  ) as { system?: string } | undefined;
-
-  const partsOf = (messageID: string) =>
-    api.state.part(messageID) as readonly EstimatorPart[] | undefined;
+  const estimatorMessages = messages.map(toEstimator);
 
   // System-prompt estimate: OpenCode does not persist the assembled system
   // prompt, so use the first-request residual — everything the provider saw
   // on the first turn minus the user content that preceded it. That covers
   // the real system prompt, tool definitions, rules files and environment
-  // context. An explicit per-message system prompt override wins when present.
-  const systemTokens = systemPrompt?.system
-    ? undefined
-    : estimateSystemResidual(messages, partsOf);
+  // context.
+  const systemTokens = estimateSystemResidual(estimatorMessages);
 
   // Categories are scaled to the full used portion of the window (not just
   // non-cached input), so the used squares are fully accounted for.
   const segments = estimateBreakdown({
-    messages: messages as unknown as Message[],
-    parts: partsOf,
+    messages: estimatorMessages,
     input: tokens,
-    systemPrompt: systemPrompt?.system,
     systemTokens
   });
 
   return {
-    modelLabel: model?.name ?? last.modelID,
-    providerLabel: provider?.name ?? last.providerID,
+    modelLabel: model?.name ?? last.model.id,
+    providerLabel: provider?.name ?? last.model.providerID,
     tokens,
     limit,
     percent: limit ? Math.round((tokens / limit) * 100) : null,
-    cost: api.state.session.get(sessionID)?.cost ?? 0,
+    cost: session?.cost ?? 0,
     segments
   };
 }
-
-export type { Message, Part };
 
 /**
  * First-request residual estimate of the system-side overhead.
@@ -103,23 +124,24 @@ export type { Message, Part };
  * the fixed system-side footprint.
  */
 export function estimateSystemResidual(
-  messages: readonly Message[],
-  parts: (messageID: string) => readonly EstimatorPart[] | undefined
+  messages: readonly EstimatorMessage[]
 ): number | undefined {
   let leadingUserChars = 0;
   for (const msg of messages) {
-    if (msg.role === "user") {
-      leadingUserChars += userPartsChars(parts(msg.id) ?? []);
+    if (msg.type === "user") {
+      leadingUserChars += msg.text?.length ?? 0;
       continue;
     }
-    if (msg.role !== "assistant") continue;
-    const assistant = msg as AssistantMessage;
-    const firstInput =
-      assistant.tokens.input +
-      assistant.tokens.cache.read +
-      assistant.tokens.cache.write;
+    if (msg.type !== "assistant") continue;
+    const tokens = msg.tokens;
+    if (!tokens) continue;
+    const firstInput = tokens.input + tokens.cache.read + tokens.cache.write;
     if (firstInput <= 0) return undefined;
     return Math.max(0, firstInput - estimateTokens(leadingUserChars));
   }
   return undefined;
 }
+
+// Re-exported for convenience; the user-visible chars estimator is shared
+// with the breakdown module.
+export { userMessageChars };
