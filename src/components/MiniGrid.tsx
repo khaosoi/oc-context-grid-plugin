@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { createMemo } from "solid-js";
-import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
+import { usePlugin } from "@opencode/plugin/tui";
 import { getContextData } from "../data";
 import { computeGrid } from "../grid";
 import { formatTokens } from "../format";
@@ -9,9 +9,18 @@ import { Grid } from "./Grid";
 const COLUMNS = 10;
 const SQUARES = 30; // 10 x 3
 
-export function MiniGrid(props: { api: TuiPluginApi; session_id: string }) {
-  const theme = () => props.api.theme.current;
-  const data = createMemo(() => getContextData(props.api, props.session_id));
+export function MiniGrid(props: { sessionID: string }) {
+  const context = usePlugin();
+  const theme = () => context.theme;
+
+  const data = createMemo(() =>
+    getContextData({
+      messages: context.data.session.message.list(props.sessionID),
+      session: context.data.session.get(props.sessionID),
+      models: context.data.location.model.list() ?? [],
+      providers: context.data.location.provider.list() ?? []
+    })
+  );
 
   const squares = createMemo(() => {
     const ctx = data();
@@ -25,14 +34,14 @@ export function MiniGrid(props: { api: TuiPluginApi; session_id: string }) {
 
   return (
     <box>
-      <text fg={theme().text}>
+      <text fg={theme().text.base}>
         <b>Context grid</b>
       </text>
       {data() === undefined ? (
-        <text fg={theme().textMuted}>no usage yet</text>
+        <text fg={theme().text.muted}>no usage yet</text>
       ) : (
         <>
-          <text fg={theme().textMuted}>
+          <text fg={theme().text.muted}>
             {formatTokens(data()!.tokens)}/{formatTokens(data()!.limit)} tokens
             ({data()!.percent ?? 0}%)
           </text>

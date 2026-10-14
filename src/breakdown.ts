@@ -1,6 +1,6 @@
 /**
- * Category breakdown estimation, ported from OpenCode's own context tab
- * (packages/app/src/components/session/session-context-breakdown.ts).
+ * Category breakdown estimation, adapted for OpenCode V2's message model
+ * (messages carry their content inline instead of separate part records).
  *
  * No tokenizers: everything is a chars/4 heuristic, scaled to the
  * provider-reported input token count so categories always sum to the
@@ -16,37 +16,61 @@ export type BreakdownSegment = {
 };
 
 /** Minimal structural shapes so the estimator stays free of SDK imports. */
+export interface EstimatorToolState {
+  status?: string;
+  /** "streaming" carries the partial JSON string; others carry the parsed args. */
+  input?: string | Record<string, unknown>;
+  /** "completed" tool result content (text items count as tool output). */
+  content?: readonly { type: string; text?: string }[];
+  error?: unknown;
+}
+
 export interface EstimatorPart {
   type: string;
   text?: string;
-  source?: { text?: { value?: string }; value?: string };
-  state?: {
-    status?: string;
-    input?: Record<string, unknown>;
-    raw?: string;
-    output?: string;
-    error?: string;
-  };
+  state?: EstimatorToolState;
 }
 
 export interface EstimatorMessage {
   id: string;
-  role: string;
-  system?: string;
+  /** V2 message type: "user", "assistant", ... */
+  type: string;
+  /** User prompt text. */
+  text?: string;
+  /** Assistant content parts. */
+  content?: readonly EstimatorPart[];
+  /** Assistant provider-reported token usage (used for the system residual). */
+  tokens?: {
+    input: number;
+    output: number;
+    reasoning: number;
+    cache: { read: number; write: number };
+  };
 }
 
 export const estimateTokens = (chars: number): number => Math.ceil(chars / 4);
 
-const charsFromUserPart = (part: EstimatorPart): number => {
-  if (part.type === "text") return part.text?.length ?? 0;
-  if (part.type === "file") return part.source?.text?.value?.length ?? 0;
-  if (part.type === "agent") return part.source?.value?.length ?? 0;
-  return 0;
+/** Total chars of user-visible prompt text. */
+export const userMessageChars = (messages: readonly EstimatorMessage[]): number =>
+  messages.reduce(
+    (sum, msg) => (msg.type === "user" ? sum + (msg.text?.length ?? 0) : sum),
+    0
+  );
+
+const inputChars = (state: EstimatorToolState): number => {
+  const input = state.input;
+  if (typeof input === "string") return input.length;
+  return Object.keys(input ?? {}).length * 16;
 };
 
-/** Total chars of user-visible content in a set of parts. */
-export const userPartsChars = (parts: readonly EstimatorPart[]): number =>
-  parts.reduce((sum, part) => sum + charsFromUserPart(part), 0);
+const errorChars = (error: unknown): number => {
+  if (typeof error === "string") return error.length;
+  try {
+    return JSON.stringify(error)?.length ?? 0;
+  } catch {
+    return 0;
+  }
+};
 
 const charsFromAssistantPart = (
   part: EstimatorPart
@@ -57,46 +81,49 @@ const charsFromAssistantPart = (
   if (part.type !== "tool") return { assistant: 0, tool: 0 };
 
   const state = part.state ?? {};
-  const input = Object.keys(state.input ?? {}).length * 16;
-  if (state.status === "pending")
-    return { assistant: 0, tool: input + (state.raw?.length ?? 0) };
-  if (state.status === "completed")
-    return { assistant: 0, tool: input + (state.output?.length ?? 0) };
-  if (state.status === "error")
-    return { assistant: 0, tool: input + (state.error?.length ?? 0) };
-  return { assistant: 0, tool: input };
+  const input = inputChars(state);
+  const output = (state.content ?? []).reduce(
+    (sum, content) => sum + (content.type === "text" ? content.text?.length ?? 0 : 0),
+    0
+  );
+  switch (state.status) {
+    case "streaming":
+    case "running":
+      return { assistant: 0, tool: input };
+    case "completed":
+      return { assistant: 0, tool: input + output };
+    case "error":
+      return { assistant: 0, tool: input + errorChars(state.error) };
+    default:
+      return { assistant: 0, tool: input };
+  }
 };
 
 export function estimateBreakdown(args: {
   messages: EstimatorMessage[];
-  parts: (messageID: string) => readonly EstimatorPart[] | undefined;
   /** Authoritative provider-reported context input tokens (the number categories must sum to). */
   input: number;
-  systemPrompt?: string;
   /**
    * Pre-computed system token estimate (e.g. first-request residual:
    * everything the provider saw before the first user message — system
    * prompt, tool definitions, rules files, environment context).
-   * Wins over `systemPrompt` when set.
    */
   systemTokens?: number;
 }): BreakdownSegment[] {
   if (!args.input) return [];
 
   const counts = {
-    system: args.systemPrompt?.length ?? 0,
     user: 0,
     assistant: 0,
     tool: 0
   };
   for (const msg of args.messages) {
-    const parts = args.parts(msg.id) ?? [];
-    if (msg.role === "user") {
-      for (const part of parts) counts.user += charsFromUserPart(part);
+    if (msg.type === "user") {
+      counts.user += msg.text?.length ?? 0;
       continue;
     }
-    if (msg.role !== "assistant") continue;
-    for (const part of parts) {
+    if (msg.type !== "assistant") continue;
+    for (const part of msg.content ?? []) {
       const next = charsFromAssistantPart(part);
       counts.assistant += next.assistant;
       counts.tool += next.tool;
@@ -104,7 +131,7 @@ export function estimateBreakdown(args: {
   }
 
   const tokens = {
-    system: args.systemTokens ?? estimateTokens(counts.system),
+    system: args.systemTokens ?? 0,
     user: estimateTokens(counts.user),
     assistant: estimateTokens(counts.assistant),
     tool: estimateTokens(counts.tool)

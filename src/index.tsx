@@ -1,6 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import { onCleanup } from "solid-js";
-import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui";
+import { Plugin } from "@opencode/plugin/tui";
 import { MiniGrid } from "./components/MiniGrid";
 import { FullView } from "./components/FullView";
 
@@ -11,76 +10,82 @@ export type ContextGridOptions = {
 
 const MODE = "oc-context-grid";
 
-const tui: TuiPlugin = async (api, options) => {
-  const opts = (options ?? {}) as ContextGridOptions;
+const CMD_OPEN = "oc-context-grid.open";
+const CMD_CLOSE = "oc-context-grid.close";
 
-  // Where to return when the full view closes.
-  let origin: { sessionID?: string } = {};
+export default Plugin.define({
+  id: "oc-context-grid",
+  setup(context) {
+    const opts = (context.options ?? {}) as ContextGridOptions;
 
-  if (opts.sidebar !== false) {
-    api.slots.register({
-      order: 150,
-      slots: {
-        sidebar_content(_ctx, props) {
-          return <MiniGrid api={api} session_id={props.session_id} />;
-        }
+    // Where to return when the full view closes.
+    let origin: { sessionID?: string } = {};
+
+    // Catalog sync happens outside the reactive reads; this just makes sure
+    // model/provider metadata (context limits, names) is in the store.
+    void context.data.location.model.sync(context.location).catch(() => {});
+    void context.data.location.provider.sync(context.location).catch(() => {});
+
+    if (opts.sidebar !== false) {
+      context.ui.slot({
+        append: "sidebar.content",
+        render: (props) => <MiniGrid sessionID={props.sessionID} />
+      });
+    }
+
+    const unregisterRoute = context.ui.router.register({
+      name: "contextgrid",
+      render: ({ data }) => {
+        const sessionID =
+          typeof data?.sessionID === "string" ? data.sessionID : undefined;
+        return <FullView sessionID={sessionID} />;
       }
     });
-  }
 
-  api.route.register([
-    {
-      name: "contextgrid",
-      render: ({ params }) => {
-        const popMode = api.mode.push(MODE);
-        onCleanup(popMode);
-        const sessionID =
-          typeof params?.sessionID === "string" ? params.sessionID : undefined;
-        return <FullView api={api} sessionID={sessionID} />;
-      }
-    }
-  ]);
-
-  api.keymap.registerLayer({
-    commands: [
-      {
-        name: "contextgrid.open",
-        title: "Context Grid",
-        category: "Plugin",
-        namespace: "palette",
-        slashName: "contextgrid",
-        slashAliases: ["ctx"],
-        desc: "Show context usage as a grid of squares",
-        run() {
-          const current = api.route.current;
-          const sessionID =
-            current.name === "session" ? current.params?.sessionID : undefined;
-          origin = typeof sessionID === "string" ? { sessionID } : {};
-          api.route.navigate("contextgrid", origin);
+    context.keymap.layer(() => ({
+      mode: "global",
+      commands: [
+        {
+          id: CMD_OPEN,
+          title: "Context Grid",
+          group: "Plugin",
+          description: "Show context usage as a grid of squares",
+          palette: true,
+          slash: { name: "contextgrid", aliases: ["ctx"] },
+          run() {
+            const current = context.ui.router.current();
+            const sessionID =
+              current.type === "session" ? current.sessionID : undefined;
+            origin = typeof sessionID === "string" ? { sessionID } : {};
+            context.ui.router.navigate({
+              type: "plugin",
+              name: "contextgrid",
+              data: { sessionID }
+            });
+          }
         }
-      }
-    ]
-  });
+      ]
+    }));
 
-  api.keymap.registerLayer({
-    mode: MODE,
-    bindings: [
-      {
-        key: "escape",
-        cmd: () => {
-          if (origin.sessionID)
-            api.route.navigate("session", { sessionID: origin.sessionID });
-          else api.route.navigate("home");
-        },
-        desc: "Close context grid"
-      }
-    ]
-  });
-};
+    context.keymap.layer(() => ({
+      mode: MODE,
+      commands: [
+        {
+          id: CMD_CLOSE,
+          bind: "escape",
+          description: "Close context grid",
+          run() {
+            if (origin.sessionID)
+              context.ui.router.navigate({
+                type: "session",
+                sessionID: origin.sessionID
+              });
+            else context.ui.router.navigate({ type: "home" });
+          }
+        }
+      ]
+    }));
 
-const plugin: TuiPluginModule & { id: string } = {
-  id: "oc-context-grid",
-  tui
-};
-
-export default plugin;
+    return () => unregisterRoute();
+  }
+});

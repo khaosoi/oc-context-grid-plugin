@@ -1,5 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
+import type { ResolvedTheme } from "@opencode/theme/tui";
 import { gridRows, glyphFor, type Square } from "../grid";
 import { categoryColor } from "./colors";
 
@@ -10,7 +10,7 @@ import { categoryColor } from "./colors";
 export function Grid(props: {
   squares: Square[];
   columns: number;
-  theme: () => TuiThemeCurrent;
+  theme: () => ResolvedTheme;
 }) {
   return (
     <>

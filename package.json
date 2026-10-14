@@ -15,10 +15,11 @@
     "./tui": "./src/index.tsx"
   },
   "engines": {
-    "opencode": "^1.18.0"
+    "opencode": "^2.0.0"
   },
   "files": [
-    "src"
+    "src",
+    "tui.tsx"
   ],
   "publishConfig": {
     "access": "public"
@@ -33,14 +34,19 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@opencode-ai/plugin": "^1.18.25",
-    "@opentui/solid": "0.4.5",
+    "@opencode/client": "2.0.28",
+    "@opencode/plugin": "2.0.28",
+    "@opencode/theme": "2.0.28",
+    "@opentui/core": "0.6.4",
+    "@opentui/solid": "0.6.4",
     "bun-types": "^1.4.0",
-    "solid-js": "1.9.12",
+    "solid-js": "1.9.17",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@opentui/solid": "^0.4.5",
+    "@opencode/plugin": "^2.0.0",
+    "@opentui/core": ">=0.5.17",
+    "@opentui/solid": ">=0.5.17",
     "solid-js": "^1.9.10"
   }
 }
