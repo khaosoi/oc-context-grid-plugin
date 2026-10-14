@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.2.2...v0.3.0) (2026-10-14)
+
+
+### Features
+
+* support opencode v2 (public beta) ([1964702](https://github.com/khaosoi/oc-context-grid-plugin/commit/1964702c6dc6eb9d1758461fe0aa1a73f054eeab))
+* support opencode v2 (public beta) ([5996816](https://github.com/khaosoi/oc-context-grid-plugin/commit/599681684079d1e0b3980326216cf7df462266bb))
+
 ## [0.2.2](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.2.1...v0.2.2) (2026-08-31)
 
 
