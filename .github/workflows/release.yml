@@ -49,6 +49,7 @@ jobs:
       # Trusted publishing needs npm >= 11.5.1
       - run: npm install -g npm@latest
       - run: bun install --frozen-lockfile
+      - run: bun run build
       - run: bun test
       - run: bun run typecheck
       # --provenance requires a public repo and the OIDC id-token above
