@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.3.0...v0.3.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* keep sidebar mini-grid in sync with the session transcript ([0c60087](https://github.com/khaosoi/oc-context-grid-plugin/commit/0c60087d426b6685e5b34a8b83d6a7494934fff8))
+* load sidebar transcript independently of host timing ([1749965](https://github.com/khaosoi/oc-context-grid-plugin/commit/1749965f779625df8662e4ac0b80f822a7c9cfe5))
+* match OpenCode 2.1 context usage selection ([bde2cad](https://github.com/khaosoi/oc-context-grid-plugin/commit/bde2cadde80d5183cf32aeea633098f67d722a4d))
+
 ## [0.3.0](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.2.2...v0.3.0) (2026-10-14)
 
 
