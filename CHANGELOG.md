@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.3.1...v0.3.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* ship precompiled bundle so npm installs stay reactive ([b12be7f](https://github.com/khaosoi/oc-context-grid-plugin/commit/b12be7f3821a481e750e527ceeb3c3d79f1734f3))
+* ship precompiled bundle so npm installs stay reactive ([1122e37](https://github.com/khaosoi/oc-context-grid-plugin/commit/1122e378e28ba24e382459dc80ba767896732e1b))
+
 ## [0.3.1](https://github.com/khaosoi/oc-context-grid-plugin/compare/v0.3.0...v0.3.1) (2026-10-20)
 
 
