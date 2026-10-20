@@ -68,14 +68,52 @@ const toEstimator = (msg: SessionMessageInfo): EstimatorMessage => {
   return { id: msg.id, type: "assistant", content: msg.content, tokens: msg.tokens };
 };
 
+type AssistantWithUsage = Extract<
+  SessionMessageInfo,
+  { type: "assistant" }
+> & {
+  tokens: NonNullable<
+    Extract<SessionMessageInfo, { type: "assistant" }>["tokens"]
+  >;
+};
+
+/**
+ * The assistant step whose tokens fill the context window now.
+ *
+ * Mirrors `lastAssistantWithUsage` from `@opencode/client/solid` (OpenCode
+ * 2.1): the latest assistant with usage after the last completed compaction
+ * and before the revert boundary. Kept local so the plugin still runs against
+ * 2.0.x hosts, which do not export the helper.
+ */
+export function lastAssistantWithUsage(
+  messages: readonly SessionMessageInfo[],
+  boundary?: string
+): AssistantWithUsage | undefined {
+  const boundaryIndex = boundary
+    ? messages.findIndex((message) => message.id === boundary)
+    : -1;
+  if (boundary && boundaryIndex === -1) return undefined;
+  const end = boundaryIndex === -1 ? messages.length : boundaryIndex;
+  const compactionIndex = messages.findLastIndex(
+    (message, index) =>
+      message.type === "compaction" &&
+      message.status === "completed" &&
+      index < end
+  );
+  return messages.findLast(
+    (message, index): message is AssistantWithUsage =>
+      message.type === "assistant" &&
+      message.tokens !== undefined &&
+      index > compactionIndex &&
+      index < end
+  );
+}
+
 export function getContextData(snapshot: ContextSnapshot): ContextData | undefined {
   const { messages, session, models, providers } = snapshot;
-  const last = messages.findLast(
-    (item) =>
-      item.type === "assistant" && (item.tokens?.output ?? 0) > 0
-  );
-  if (!last || last.type !== "assistant") return undefined;
-  const tokens = last.tokens ? tokenTotal(last.tokens) : 0;
+  const last = lastAssistantWithUsage(messages, session?.revert?.messageID);
+  if (!last) return undefined;
+  const tokens = tokenTotal(last.tokens);
   if (!tokens) return undefined;
 
   const model = models.find(
