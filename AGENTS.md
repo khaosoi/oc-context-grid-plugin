@@ -9,12 +9,13 @@ pixel grid (a sidebar mini-grid and a full-screen `/contextgrid` view). See
 ## Commands
 
 - `bun install` — install dependencies
+- `bun run build` — precompile the published TUI entry into `dist/`
 - `bun test` — run the test suites in `test/`
 - `bun run typecheck` — typecheck with `tsc --noEmit`
 
-Run `bun test` and `bun run typecheck` after any change and make sure they pass
-before finishing. CI (`.github/workflows/ci.yml`) runs both on PRs and pushes to
-`main`.
+Run `bun run build`, `bun test` and `bun run typecheck` after any change and make
+sure they pass before finishing. CI (`.github/workflows/ci.yml`) runs all three on
+PRs and pushes to `main`.
 
 ## Layout
 
@@ -24,6 +25,9 @@ before finishing. CI (`.github/workflows/ci.yml`) runs both on PRs and pushes to
 - `src/grid.ts` — pure square allocation logic
 - `src/format.ts` — token/cost/percent formatting
 - `src/components/` — TUI views (`MiniGrid`, `FullView`, shared `Grid`, colours)
+- `scripts/build.ts` — precompiles `src/` into `dist/index.js` with the OpenTUI Solid
+  transform (Bun's automatic JSX runtime renders npm-installed plugin views as
+  mount-time snapshots because OpenCode skips `node_modules` in that transform)
 - `test/` — unit tests (grid, breakdown, data)
 - `.github/workflows/` — CI (`ci.yml`), release-please + npm publish (`release.yml`)
 - `release-please-config.json` / `.release-please-manifest.json` — release-please config
@@ -36,6 +40,9 @@ before finishing. CI (`.github/workflows/ci.yml`) runs both on PRs and pushes to
   Merging it tags the release, cuts a GitHub Release and publishes
   `@khaosoigai/oc-context-grid` to npm via trusted publishing (OIDC, no registry
   token). Needs the `RELEASE_APP_ID` / `RELEASE_APP_PRIVATE_KEY` repo secrets.
+- `package.json` publishes only `dist/`, and `prepack` rebuilds it. Never point
+  `exports["./tui"]` back at the TypeScript sources: npm installs load from
+  `node_modules`, where OpenCode's Solid transform does not run.
 
 ## Conventions
 

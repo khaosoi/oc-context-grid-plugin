@@ -12,14 +12,13 @@
   ],
   "type": "module",
   "exports": {
-    "./tui": "./src/index.tsx"
+    "./tui": "./dist/index.js"
   },
   "engines": {
     "opencode": "^2.0.0"
   },
   "files": [
-    "src",
-    "tui.tsx"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
@@ -29,6 +28,8 @@
     "url": "git+https://github.com/khaosoi/oc-context-grid-plugin.git"
   },
   "scripts": {
+    "build": "bun run scripts/build.ts",
+    "prepack": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

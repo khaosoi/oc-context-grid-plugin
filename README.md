@@ -81,7 +81,8 @@ directory), in global `~/.config/opencode/cli.json`:
 ```
 
 Restart OpenCode. Local plugin sources hot-reload on save, so the TUI picks up edits
-without a restart in most cases.
+without a restart in most cases. Local development loads `tui.tsx` and the TypeScript
+sources directly; the npm package loads the precompiled bundle described below.
 
 ## How it works (no tokenizers)
 
@@ -135,9 +136,20 @@ without a restart in most cases.
 
 ```sh
 bun install
+bun run build     # precompile the published entry into dist/
 bun test          # unit tests for the grid, breakdown and system-residual maths
-bun run typecheck # tsc --noEmit over src/ and test/
+bun run typecheck # tsc --noEmit over src/, test/ and scripts/
 ```
+
+### Packaging
+
+The npm package ships a precompiled bundle at `dist/index.js`; `package.json` points
+`exports["./tui"]` at it. OpenCode runs local plugin sources through the OpenTUI Solid
+transform but excludes every path under `node_modules`, so a package that shipped `.tsx`
+was loaded with Bun's automatic JSX runtime. That runtime evaluates JSX once, which is
+why npm installs rendered mount-time snapshots until the sidebar remounted. `bun run
+build` (also run by `prepack`) compiles the entry with the Solid transform and fails if
+the output is not universal-mode JSX.
 
 Layout:
 
@@ -155,18 +167,23 @@ src/
     Grid.tsx          # shared square rendering
     MiniGrid.tsx      # sidebar slot view
     FullView.tsx      # /contextgrid route view
+scripts/
+  build.ts            # precompiles src/ into dist/index.js (Solid transform)
 test/                 # bun test suites (grid, breakdown, data)
 ```
 
 ## Note on the retired 0.2.x (OpenCode 1.18) releases
 
-The 1.18-era package rendered mount-time snapshots rather than live views. The cause was
-an upstream Bun resolver issue ([oven-sh/bun#40397](https://github.com/oven-sh/bun/issues/40397))
-that routed the plugin's `solid-js` imports to its SSR build, where `createMemo` never
-subscribes; the V1 TUI plugin API also relied on TUI-internal state instead of a
-documented reactive data layer. OpenCode 2.0 ships a new TUI plugin API
-(`@opencode/plugin/tui`) whose reactive data layer and host-owned Solid bridging remove
-both problems, and the 0.3.x releases target it exclusively.
+The 1.18-era package rendered mount-time snapshots rather than live views: an upstream
+Bun resolver issue sent the plugin's `solid-js` imports to its SSR build, where
+`createMemo` never subscribes, and the V1 TUI plugin API relied on TUI-internal state
+rather than a documented reactive data layer. OpenCode 2.0 ships the
+`@opencode/plugin/tui` API and a reactive data layer, which the 0.3.x releases target.
+
+OpenCode 2.x still skips `node_modules` when applying its Solid transform. A TSX
+package is therefore reactive only when loaded from a local checkout; npm installs need
+the precompiled `dist/index.js`. If a view ever freezes until it remounts, check that
+the install resolved to the bundle rather than the TypeScript sources.
 
 ## Licence
 
